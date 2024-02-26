@@ -101,7 +101,11 @@ class robot_interface:
                 self.move = self.joystick.mode == "standing"
                 rospy.loginfo("Mode: " + str(self.joystick.mode))
                 rospy.loginfo("Moving: " + str(self.joystick.left_x) + " " + str(self.joystick.left_y) + " " + str(self.joystick.right_x) + " " + str(self.joystick.right_y))
-                    
+                
+                if self.move:
+                    self.cmd_vel.linear.x = self.joystick.left_y
+                    self.cmd_vel.angular.z = self.joystick.right_x
+                    self.robot_pub.publish(self.cmd_vel)
                     
             except KeyboardInterrupt:
                 self.shutdown()
@@ -125,15 +129,21 @@ class robot_interface:
     ## NOTE: need to ensure linear.x and angular.z are set to 0 (from server function) when the joystick is not being used
     ## should be called when we receive a joystick message
     def call_back_VR_joy_left(self, joy_msg:  Joy):
-        self.joystick.left_x = float(joy_msg.axes[0])
-        self.joystick.left_y = float(joy_msg.axes[1])
-        rospy.loginfo("Left Joystick X: " + str(self.joystick.left_x) + " Y: " + str(self.joystick.left_y))
+        try:
+            self.joystick.left_x = float(joy_msg.axes[0])
+            self.joystick.left_y = float(joy_msg.axes[1])
+            rospy.loginfo("Left Joystick X: " + str(self.joystick.left_x) + " Y: " + str(self.joystick.left_y))
+        except:
+            rospy.loginfo("Error in left joystick")
         
     def call_back_VR_joy_right(self, joy_msg:  Joy):
-        self.joystick.right_x = float(joy_msg.axes[0])
-        self.joystick.right_y = float(joy_msg.axes[1])
-        rospy.loginfo("Right Joystick X: " + str(self.joystick.right_x) + " Y: " + str(self.joystick.right_y))
-   
+        try:
+            self.joystick.right_x = float(joy_msg.axes[0])
+            self.joystick.right_y = float(joy_msg.axes[1])
+            rospy.loginfo("Right Joystick X: " + str(self.joystick.right_x) + " Y: " + str(self.joystick.right_y))
+        except:
+            rospy.loginfo("Error in right joystick")
+        
     def call_back_VR_mode(self, mode: String):
         if mode.data in self.joystick.modes:
             self.joystick.mode = mode
