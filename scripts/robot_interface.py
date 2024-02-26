@@ -102,7 +102,8 @@ class robot_interface:
                 rospy.loginfo("Mode: " + str(self.joystick.mode))
                 rospy.loginfo("Moving: " + str(self.joystick.left_x) + " " + str(self.joystick.left_y) + " " + str(self.joystick.right_x) + " " + str(self.joystick.right_y))
                 
-                if self.move:
+                ## P3AT robot code
+                if self.move and self.joystick.left_y != 0 or self.joystick.right_x != 0:
                     self.cmd_vel.linear.x = self.joystick.left_y
                     self.cmd_vel.angular.z = self.joystick.right_x
                     self.robot_pub.publish(self.cmd_vel)
@@ -117,14 +118,7 @@ class robot_interface:
         rospy.loginfo("Closing robot_interface node")
         rospy.signal_shutdown()
     
-    
 
-    ## should be called when we receive a joystick message
-    # def call_back_VR_joy(self, joy_msg: Joy):
-    #     ## get the joystick command
-    #     self.cmd_vel.linear.x = float(joy_msg.axes[0])
-    #     self.cmd_vel.angular.z = float(joy_msg.axes[-1])
-    #     self.move = True if self.cmd_vel.linear.x != 0 or self.cmd_vel.linear.z !=0 else False
         
     ## NOTE: need to ensure linear.x and angular.z are set to 0 (from server function) when the joystick is not being used
     ## should be called when we receive a joystick message
