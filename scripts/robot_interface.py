@@ -34,6 +34,7 @@ from tf.transformations import quaternion_from_euler
 from typing import Tuple
 import threading
 from typing import List 
+import time 
 
 
 class JoyStick:
@@ -93,6 +94,10 @@ class robot_interface:
     ######################### 
 
     def run(self):
+        self.timer_left_joy = threading.Timer(0.5, self.timeout_left_joy)
+        self.timer_left_joy.start()
+        self.timer_right_joy = threading.Timer(0.5, self.timeout_right_joy)
+        self.timer_right_joy.start()
         while not rospy.is_shutdown():
             try:
                 '''
@@ -101,12 +106,12 @@ class robot_interface:
                 self.move = self.joystick.mode == "standing"
                 rospy.loginfo("Mode: " + str(self.joystick.mode))
                 rospy.loginfo("Moving: " + str(self.joystick.left_x) + " " + str(self.joystick.left_y) + " " + str(self.joystick.right_x) + " " + str(self.joystick.right_y))
-                
+                rospy.loginfo("Time: " + str(time.ctime(time.time())))
                 ## P3AT robot code
-                if self.move and self.joystick.left_y != 0 or self.joystick.right_x != 0:
-                    self.cmd_vel.linear.x = self.joystick.left_y
-                    self.cmd_vel.angular.z = self.joystick.right_x
-                    self.robot_pub.publish(self.cmd_vel)
+                self.cmd_vel.linear.x = self.joystick.left_y
+                self.cmd_vel.angular.z = self.joystick.right_x
+                # rospy.loginfo("Sending to p3AT")
+                self.robot_pub.publish(self.cmd_vel)
                     
             except KeyboardInterrupt:
                 self.shutdown()
@@ -119,7 +124,16 @@ class robot_interface:
         rospy.signal_shutdown()
     
 
+    def timeout_left_joy(self):
+        self.joystick.left_x = 0
+        self.joystick.left_y = 0
+        rospy.loginfo("Timeout left joystick")
         
+    def timeout_right_joy(self):
+        self.joystick.right_x = 0
+        self.joystick.right_y = 0
+        rospy.loginfo("Timeout right joystick")
+
     ## NOTE: need to ensure linear.x and angular.z are set to 0 (from server function) when the joystick is not being used
     ## should be called when we receive a joystick message
     def call_back_VR_joy_left(self, joy_msg:  Joy):
@@ -127,23 +141,35 @@ class robot_interface:
             self.joystick.left_x = float(joy_msg.axes[0])
             self.joystick.left_y = float(joy_msg.axes[1])
             rospy.loginfo("Left Joystick X: " + str(self.joystick.left_x) + " Y: " + str(self.joystick.left_y))
-        except:
-            rospy.loginfo("Error in left joystick")
+            rospy.loginfo("Time robot interface: " + str(time.ctime(time.time())))
+            self.timer_left_joy.cancel()
+            self.timer_left_joy = threading.Timer(0.5, self.timeout_left_joy)
+            self.timer_left_joy.start()
+        except Exception as e:
+            rospy.loginfo("Error in left joystick: " + str(e))
         
     def call_back_VR_joy_right(self, joy_msg:  Joy):
         try:
             self.joystick.right_x = float(joy_msg.axes[0])
             self.joystick.right_y = float(joy_msg.axes[1])
             rospy.loginfo("Right Joystick X: " + str(self.joystick.right_x) + " Y: " + str(self.joystick.right_y))
-        except:
-            rospy.loginfo("Error in right joystick")
+            rospy.loginfo("Time robot interface: " + str(time.ctime(time.time())))
+            self.timer_right_joy.cancel()
+            self.timer_right_joy = threading.Timer(0.5, self.timeout_right_joy)
+            self.timer_right_joy.start()
+        except Exception as e:
+            rospy.loginfo("Error in right joystick: " + str(e))
         
     def call_back_VR_mode(self, mode: String):
-        if mode.data in self.joystick.modes:
-            self.joystick.mode = mode
-            rospy.loginfo("Mode " + str(self.joystick.mode))
-        else: 
-            rospy.loginfo("Invalid mode")
+        try:
+            if mode.data in self.joystick.modes:
+                self.joystick.mode = mode
+                rospy.loginfo("Mode " + str(self.joystick.mode))
+                rospy.loginfo("Time robot interface: " + str(time.ctime(time.time())))
+            else: 
+                rospy.loginfo("Invalid mode")
+        except:
+            rospy.loginfo("Error in mode: " + str(e))
                     
     def call_back_stop(self, stop: String):
         if stop.data == "stop":
@@ -156,7 +182,7 @@ if __name__ == "__main__":
 
     rospy.sleep(0.5)
 
-    rospy.init_node('robot_interface', anonymous=True)
+    rospy.init_node('robot_interface')
 
     rmv = robot_interface()
 
